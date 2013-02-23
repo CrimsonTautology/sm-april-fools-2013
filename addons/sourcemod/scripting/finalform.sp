@@ -11,7 +11,7 @@
  */
 
 #include <sourcemod>
-//#include <smlib>
+#include <smlib>
 
 #pragma semicolon 1
 
@@ -25,6 +25,9 @@ public Plugin:myinfo =
 };
 
 
+#define WAVE_STEP 60
+new gPowerLevels[MAXPLAYERS + 1];
+new bool:gIsCharging[MAXPLAYERS + 1];
 
 public OnPluginStart()
 {
@@ -58,7 +61,32 @@ public Action:Command_Powerup(client, args){
 	return Plugin_Continue;	
 }
 
+
+
+/**
+* A given client will emit a shake that effects players based on his powerlevel
+* and their distance to him.
+*/
+public EmitShake(client){
+	//for (new i=0; )
+
+}
+/**
+* A given client will emit a force that pushes players back based on his
+* powerlevel and their distance to him.
+*/
+public EmitForce(client){
+
+}
 public Action:tst1(client, args){
+	decl String:searchKey[64];
+	GetCmdArg(1, searchKey, sizeof(searchKey));
+
+	Client_Shake(client);
+	new target = Client_FindByName(searchKey);
+	EmitShake(target);
+	EmitForce(target);
+
 	return Plugin_Continue;
 }
 
