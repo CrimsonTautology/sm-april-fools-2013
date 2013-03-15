@@ -34,6 +34,7 @@ public OnPluginStart()
 
 
 	RegConsoleCmd("sm_powerup", Command_Powerup);
+	RegConsoleCmd("sm_instant_transmission", Command_Instant_Transmission);
 	RegConsoleCmd("sm_tst1", tst1);
 	RegConsoleCmd("sm_tst2", Command_Tst2);
 	RegConsoleCmd("sm_tst3", tst3);
@@ -47,6 +48,7 @@ public Action:Command_Powerup(client, args){
 		return Plugin_Handled;
 	}
 
+
 	if (args == 0) {
 		ReplyToCommand(client, "[SM]FFFFFFF Nomgrep Incorrect Syntax:  !nomsearch <searchstring>");
 		return Plugin_Handled;
@@ -55,20 +57,34 @@ public Action:Command_Powerup(client, args){
 	return Plugin_Continue;	
 }
 
+public Action:Command_Instant_Transmission(client, args){
+	return Plugin_Handled;
+}
 
 
 /**
-* A given client will emit a shake that effects players based on his powerlevel
-* and their distance to him.
-*/
+  Teleport client just behind target.
+ */
+public teleport(client, target){
+	decl Float:vLook[3], Float:vTargetPos[3], Float:vNewPos[3];
+
+	Client_GetViewOffset(target, vLook);
+	TeleportEntity(client, vNewPos, vLook, NULL_VECTOR);
+}
+
+
+/**
+ * A given client will emit a shake that effects players based on his powerlevel
+ * and their distance to him.
+ */
 public EmitShake(client){
 	//for (new i=0; )
 
 }
 /**
-* A given client will emit a force that pushes players back based on his
-* powerlevel and their distance to him.
-*/
+ * A given client will emit a force that pushes players back based on his
+ * powerlevel and their distance to him.
+ */
 public EmitForce(client){
 
 }
