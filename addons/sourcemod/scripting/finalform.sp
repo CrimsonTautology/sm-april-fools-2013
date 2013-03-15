@@ -35,16 +35,10 @@ public OnPluginStart()
 
 	RegConsoleCmd("sm_powerup", Command_Powerup);
 	RegConsoleCmd("sm_tst1", tst1);
-	RegConsoleCmd("sm_tst2", tst2);
+	RegConsoleCmd("sm_tst2", Command_Tst2);
 	RegConsoleCmd("sm_tst3", tst3);
 	RegConsoleCmd("sm_tst4", tst4);
 	RegConsoleCmd("sm_tst5", tst5);
-	RegConsoleCmd("sm_tst6", tst6);
-	RegConsoleCmd("sm_tst7", tst7);
-	RegConsoleCmd("sm_tst8", tst8);
-	RegConsoleCmd("sm_tst9", tst9);
-	RegConsoleCmd("sm_tst10", tst10);
-	RegConsoleCmd("sm_tst11", tst11);
 }
 
 
@@ -54,7 +48,7 @@ public Action:Command_Powerup(client, args){
 	}
 
 	if (args == 0) {
-		ReplyToCommand(client, "[SM] Nomgrep Incorrect Syntax:  !nomsearch <searchstring>");
+		ReplyToCommand(client, "[SM]FFFFFFF Nomgrep Incorrect Syntax:  !nomsearch <searchstring>");
 		return Plugin_Handled;
 	}
 
@@ -79,44 +73,34 @@ public EmitForce(client){
 
 }
 public Action:tst1(client, args){
+	PrintToChatAll("Hit tst1");
+	if (!client) {
+		return Plugin_Handled;
+	}
+
 	decl String:searchKey[64];
 	GetCmdArg(1, searchKey, sizeof(searchKey));
+
 
 	Client_Shake(client);
 	new target = Client_FindByName(searchKey);
 	EmitShake(target);
 	EmitForce(target);
 
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
-public Action:tst2(client, args){
-	return Plugin_Continue;
+public Action:Command_Tst2(client, args){
+	PrintToChatAll("Hit tst2");
+	return Plugin_Handled;
 }
 public Action:tst3(client, args){
-	return Plugin_Continue;
+	PrintToChatAll("Hit tst3jk");
+	return Plugin_Handled;
 }
 public Action:tst4(client, args){
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 public Action:tst5(client, args){
-	return Plugin_Continue;
-}
-public Action:tst6(client, args){
-	return Plugin_Continue;
-}
-public Action:tst7(client, args){
-	return Plugin_Continue;
-}
-public Action:tst8(client, args){
-	return Plugin_Continue;
-}
-public Action:tst9(client, args){
-	return Plugin_Continue;
-}
-public Action:tst10(client, args){
-	return Plugin_Continue;
-}
-public Action:tst11(client, args){
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
