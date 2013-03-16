@@ -52,15 +52,15 @@ public OnMapStart(){
 public Action:LoadSounds(Handle:timer){
 
 	PrecacheSound("af_ff/au.wav", true);
-	AddFileToDownloadsTable("sounds/af_ff/au.wav");
+	AddFileToDownloadsTable("sound/af_ff/au.wav");
 	PrecacheSound("af_ff/dbc.wav", true);
-	AddFileToDownloadsTable("sounds/af_ff/dbc.wav");
+	AddFileToDownloadsTable("sound/af_ff/dbc.wav");
 	PrecacheSound("af_ff/sk.wav", true);
-	AddFileToDownloadsTable("sounds/af_ff/sk.wav");
+	AddFileToDownloadsTable("sound/af_ff/sk.wav");
 	PrecacheSound("af_ff/sw.wav", true);
-	AddFileToDownloadsTable("sounds/af_ff/sw.wav");
+	AddFileToDownloadsTable("sound/af_ff/sw.wav");
 	PrecacheSound("af_ff/tp.wav", true);
-	AddFileToDownloadsTable("sounds/af_ff/tp.wav");
+	AddFileToDownloadsTable("sound/af_ff/tp.wav");
 }
 
 
@@ -101,15 +101,18 @@ public teleport(client, target){
 	GetClientAbsAngles(target, vTargetLook);
 
 	NormalizeVector(vTargetLook, vOffsetPos);
-	vOffsetPos[0] *=-10.0;
-	vOffsetPos[1] *=0.0;
-	vOffsetPos[2] *=-10.0;
+	ScaleVector(vOffsetPos, -2.0);
+	vOffsetPos[1] = vTargetPos[1];
+	AddVectors(vTargetPos, vOffsetPos, vNewPos);
 
+	PrintToChatAll("x=%f y=%f z=%f", vOffsetPos[0], vOffsetPos[1], vOffsetPos[2]);
+	PrintToChatAll("x=%f y=%f z=%f", vTargetPos[0], vTargetPos[1], vTargetPos[2]);
+	PrintToChatAll("x=%f y=%f z=%f", vTargetLook[0], vTargetLook[1], vTargetLook[2]);
 	vTargetLook[1] = 0.0;
 		
 		//TODO add teleport effect
-	TeleportEntity(client, vTargetPos, NULL_VECTOR, NULL_VECTOR);
-	EmitSoundToAll("af_ff/tp.wav",
+	TeleportEntity(client, vNewPos, vTargetLook, NULL_VECTOR);
+	EmitSoundToAll("sound/af_ff/tp.wav",
 		client,
 		SNDCHAN_AUTO,
 		SNDLEVEL_MINIBIKE
