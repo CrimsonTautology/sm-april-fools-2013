@@ -13,6 +13,7 @@
 #include <sourcemod>
 #include <smlib>
 #include <sdktools>
+#include <tf2>
 
 #pragma semicolon 1
 
@@ -25,62 +26,143 @@ public Plugin:myinfo =
 	url = "https://github.com/CrimsonTautology/sm_finalform"
 };
 
+#define TIME_STEP	0.1
+#define POWER_LEVEL_STEP	5
+#define POWER_UP_STUNFLAG  TF_STUNFLAG_SLOWDOWN  | TF_STUNFLAG_THIRDPERSON |  TF_STUNFLAG_NOSOUNDOREFFECT | TF_STUNFLAG_LIMITMOVEMENT
 
-#define WAVE_STEP 60
-new gPowerLevels[MAXPLAYERS + 1];
+#define SOUND_BOOM		"weapons/explode3.wav"
+#define SOUND_TELEPORT	"af_ff/tp.wav"
+#define SOUND_AURUA 	"af_ff/au.wav"
+#define SOUND_MELEE 	"af_ff/sk.wav"
+
+new Float:gPowerLevels[MAXPLAYERS + 1];
 new bool:gIsCharging[MAXPLAYERS + 1];
 
 public OnPluginStart()
 {
 
 
-	RegConsoleCmd("sm_powerup", Command_Powerup);
+	RegConsoleCmd("+sm_powerup", StartPowerup);
+	RegConsoleCmd("-sm_powerup", EndPowerup);
 	RegConsoleCmd("sm_instant_transmission", Command_Instant_Transmission);
 	RegConsoleCmd("sm_tst1", tst1);
-	RegConsoleCmd("sm_tst2", Command_Tst2);
 	RegConsoleCmd("sm_tst3", tst3);
+
+	RegConsoleCmd("sm_tst2", Command_Tst2);
 	RegConsoleCmd("sm_tst4", tst4);
 	RegConsoleCmd("sm_tst5", tst5);
+
+
+	CreateTimer(TIME_STEP, PowerStep);
 }
 
 /**
 	Precache custom sounds
 */
 public OnMapStart(){
-	CreateTimer(0.1, LoadSounds);
+
+	PrecacheSound(SOUND_BOOM, true);
+	PrecacheSound(SOUND_TELEPORT, true);
+	PrecacheSound(SOUND_AURUA, true);
+	PrecacheSound(SOUND_MELEE, true);
+
+	decl String:teleportPath[128];
+	decl String:auruaPath[128];
+	decl String:meleePath[128];
+	Format(teleportPath, sizeof(teleportPath), "sound/%s", SOUND_TELEPORT);
+	Format(auruaPath, sizeof(auruaPath), "sound/%s", SOUND_AURUA);
+	Format(meleePath, sizeof(meleePath), "sound/%s", SOUND_MELEE);
+
+	AddFileToDownloadsTable(teleportPath);
+	AddFileToDownloadsTable(auruaPath);
+	AddFileToDownloadsTable(meleePath);
 }
-public Action:LoadSounds(Handle:timer){
 
-	PrecacheSound("af_ff/au.wav", true);
-	AddFileToDownloadsTable("sound/af_ff/au.wav");
-	PrecacheSound("af_ff/dbc.wav", true);
-	AddFileToDownloadsTable("sound/af_ff/dbc.wav");
-	PrecacheSound("af_ff/sk.wav", true);
-	AddFileToDownloadsTable("sound/af_ff/sk.wav");
-	PrecacheSound("af_ff/sw.wav", true);
-	AddFileToDownloadsTable("sound/af_ff/sw.wav");
-	PrecacheSound("af_ff/tp.wav", true);
-	AddFileToDownloadsTable("sound/af_ff/tp.wav");
+public OnClientDisconnect(client){
+	gPowerLevels[client] = 0.0;
+	gIsCharging[client] = false;
 }
 
 
-public Action:Command_Powerup(client, args){
-	if (!client) {
+
+public Action:StartPowerup(client, args){
+	if (!Client_IsIngame(client) || !IsPlayerAlive(client)) {
 		return Plugin_Handled;
 	}
+	PrintToChatAll("%d StartPowerup", client);
+	TF2_StunPlayer(client,
+			TIME_STEP + 0.2,
+			1.0,
+			POWER_UP_STUNFLAG);
+	gIsCharging[client] = true;
+	EmitSoundToAll(SOUND_AURUA, client, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL);
 
-
-	if (args == 0) {
-		ReplyToCommand(client, "[SM]FFFFFFF Nomgrep Incorrect Syntax:  !nomsearch <searchstring>");
+	return Plugin_Continue;	
+}
+public Action:EndPowerup(client, args){
+	if (!Client_IsIngame(client) || !IsPlayerAlive(client)) {
 		return Plugin_Handled;
 	}
+	PrintToChatAll("%d EndPowerup", client);
+	gIsCharging[client] = false;
+	gPowerLevels[client] = 0.0;
+	StopSound(client, SNDCHAN_AUTO, SOUND_AURUA);
 
 	return Plugin_Continue;	
 }
 
 /**
-	Get the target client that client is looking at and teleport at them.
+	Do calculations for every player if they are charging up
+ */
+public Action:PowerStep(Handle:timer){
+
+	for (new client=1; client <= MaxClients; client++){
+		if(!gIsCharging[client]){
+			//Ignore players who are not currently charging
+			continue;
+		}
+
+		gPowerLevels[client] += POWER_LEVEL_STEP;
+		TF2_StunPlayer(client,
+				TIME_STEP + 0.2,
+				1.0,
+				POWER_UP_STUNFLAG);
+	
+		new String:name[64];
+		GetClientName(client, name, sizeof(name));
+		PrintToChatAll("%s at %f", name, gPowerLevels[client]);
+		applyEffects(client);
+
+	}
+
+	CreateTimer(TIME_STEP, PowerStep);
+}
+/**
+  Apply an effect to every client, from a clien
 */
+public applyEffects(from){
+	for (new client=1; client <= MaxClients; client++){
+		if (!Client_IsIngame(client) || !IsPlayerAlive(client)) {
+			//Ignore players we don't care about
+			continue;
+		}
+
+		new Float:coefficient = gPowerLevels[from] / Pow((Entity_GetDistance(from, client) + 1), 2.0);
+		if(coefficient > 0.01){
+			Client_Shake(client,
+					SHAKE_START,
+					5.0,
+					600 * coefficient,
+					TIME_STEP * 3);
+		}
+
+	}
+
+}
+
+/**
+  Get the target client that client is looking at and teleport at them.
+ */
 public Action:Command_Instant_Transmission(client, args){
 	new target = GetClientAimTarget(client, true);
 	if(target >= 0){
@@ -94,47 +176,28 @@ public Action:Command_Instant_Transmission(client, args){
   Teleport client just behind target.
  */
 public teleport(client, target){
-	decl Float:vTargetLook[3], Float:vTargetPos[3], Float:vNewPos[3];
+	decl Float:vTargetAng[3], Float:vTargetVel[3], Float:vTargetPos[3], Float:vNewPos[3];
 	decl Float:vOffsetPos[3];
 
 	GetClientAbsOrigin(target, vTargetPos);
-	GetClientAbsAngles(target, vTargetLook);
+	GetClientEyeAngles(target, vTargetAng);
+	GetAngleVectors(vTargetAng, vTargetVel, NULL_VECTOR, NULL_VECTOR);
 
-	NormalizeVector(vTargetLook, vOffsetPos);
-	ScaleVector(vOffsetPos, -2.0);
-	vOffsetPos[1] = vTargetPos[1];
+
+	NormalizeVector(vTargetVel, vOffsetPos);
+	ScaleVector(vOffsetPos, -60.0);
 	AddVectors(vTargetPos, vOffsetPos, vNewPos);
+	vOffsetPos[2] = vTargetPos[2];
+	vTargetAng[0] = 0.0;
+	vTargetAng[2] = 0.0;
 
-	PrintToChatAll("x=%f y=%f z=%f", vOffsetPos[0], vOffsetPos[1], vOffsetPos[2]);
-	PrintToChatAll("x=%f y=%f z=%f", vTargetPos[0], vTargetPos[1], vTargetPos[2]);
-	PrintToChatAll("x=%f y=%f z=%f", vTargetLook[0], vTargetLook[1], vTargetLook[2]);
-	vTargetLook[1] = 0.0;
-		
-		//TODO add teleport effect
-	TeleportEntity(client, vNewPos, vTargetLook, NULL_VECTOR);
-	EmitSoundToAll("sound/af_ff/tp.wav",
-		client,
-		SNDCHAN_AUTO,
-		SNDLEVEL_MINIBIKE
-		);
+
+	//TODO add teleport effect
+	TeleportEntity(client, vNewPos, vTargetAng, vTargetVel);
+	EmitAmbientSound(SOUND_TELEPORT, vNewPos, client, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL);
 }
 
 
-/**
- * A given client will emit a shake that effects players based on his powerlevel
- * and their distance to him.
- */
-public EmitShake(client){
-	//for (new i=0; )
-
-}
-/**
- * A given client will emit a force that pushes players back based on his
- * powerlevel and their distance to him.
- */
-public EmitForce(client){
-
-}
 public Action:tst1(client, args){
 	PrintToChatAll("Hit tst1");
 	if (!client) {
@@ -145,10 +208,8 @@ public Action:tst1(client, args){
 	GetCmdArg(1, searchKey, sizeof(searchKey));
 
 
-	Client_Shake(client);
 	new target = Client_FindByName(searchKey);
-	EmitShake(target);
-	EmitForce(target);
+	gIsCharging[target] = true;
 
 	return Plugin_Handled;
 }
@@ -158,7 +219,18 @@ public Action:Command_Tst2(client, args){
 	return Plugin_Handled;
 }
 public Action:tst3(client, args){
-	PrintToChatAll("Hit tst3jk");
+	PrintToChatAll("Hit tst3");
+	if (!client) {
+		return Plugin_Handled;
+	}
+
+	decl String:searchKey[64];
+	GetCmdArg(1, searchKey, sizeof(searchKey));
+
+
+	new target = Client_FindByName(searchKey);
+	gIsCharging[target] = false;
+
 	return Plugin_Handled;
 }
 public Action:tst4(client, args){
