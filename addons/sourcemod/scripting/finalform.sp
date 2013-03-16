@@ -97,16 +97,18 @@ public teleport(client, target){
 	decl Float:vTargetLook[3], Float:vTargetPos[3], Float:vNewPos[3];
 	decl Float:vOffsetPos[3];
 
-	GetClientAbsOrigin(client, vTargetPos);
-	GetClientAbsOrigin(client, vTargetLook);
+	GetClientAbsOrigin(target, vTargetPos);
+	GetClientAbsAngles(target, vTargetLook);
 
 	NormalizeVector(vTargetLook, vOffsetPos);
 	vOffsetPos[0] *=-10.0;
-	vOffsetPos[1] *=0;
+	vOffsetPos[1] *=0.0;
 	vOffsetPos[2] *=-10.0;
-	AddVectors(vTargetPos, vOffsetPos, vNewPos);
+
+	vTargetLook[1] = 0.0;
 		
-	TeleportEntity(client, vNewPos, vTargetLook, NULL_VECTOR);
+		//TODO add teleport effect
+	TeleportEntity(client, vTargetPos, NULL_VECTOR, NULL_VECTOR);
 	EmitSoundToAll("af_ff/tp.wav",
 		client,
 		SNDCHAN_AUTO,
