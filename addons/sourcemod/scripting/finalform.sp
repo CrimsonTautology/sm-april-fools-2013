@@ -12,6 +12,7 @@
 
 #include <sourcemod>
 #include <smlib>
+#include <sdktools>
 
 #pragma semicolon 1
 
@@ -42,6 +43,26 @@ public OnPluginStart()
 	RegConsoleCmd("sm_tst5", tst5);
 }
 
+/**
+	Precache custom sounds
+*/
+public OnMapStart(){
+	CreateTimer(0.1, LoadSounds);
+}
+public Action:LoadSounds(Handle:timer){
+
+	PrecacheSound("af_ff/au.wav", true);
+	AddFileToDownloadsTable("sounds/af_ff/au.wav");
+	PrecacheSound("af_ff/dbc.wav", true);
+	AddFileToDownloadsTable("sounds/af_ff/dbc.wav");
+	PrecacheSound("af_ff/sk.wav", true);
+	AddFileToDownloadsTable("sounds/af_ff/sk.wav");
+	PrecacheSound("af_ff/sw.wav", true);
+	AddFileToDownloadsTable("sounds/af_ff/sw.wav");
+	PrecacheSound("af_ff/tp.wav", true);
+	AddFileToDownloadsTable("sounds/af_ff/tp.wav");
+}
+
 
 public Action:Command_Powerup(client, args){
 	if (!client) {
@@ -57,7 +78,14 @@ public Action:Command_Powerup(client, args){
 	return Plugin_Continue;	
 }
 
+/**
+	Get the target client that client is looking at and teleport at them.
+*/
 public Action:Command_Instant_Transmission(client, args){
+	new target = GetClientAimTarget(client, true);
+	if(target >= 0){
+		teleport(client, target);
+	}
 	return Plugin_Handled;
 }
 
@@ -66,10 +94,24 @@ public Action:Command_Instant_Transmission(client, args){
   Teleport client just behind target.
  */
 public teleport(client, target){
-	decl Float:vLook[3], Float:vTargetPos[3], Float:vNewPos[3];
+	decl Float:vTargetLook[3], Float:vTargetPos[3], Float:vNewPos[3];
+	decl Float:vOffsetPos[3];
 
-	Client_GetViewOffset(target, vLook);
-	TeleportEntity(client, vNewPos, vLook, NULL_VECTOR);
+	GetClientAbsOrigin(client, vTargetPos);
+	GetClientAbsOrigin(client, vTargetLook);
+
+	NormalizeVector(vTargetLook, vOffsetPos);
+	vOffsetPos[0] *=-10.0;
+	vOffsetPos[1] *=0;
+	vOffsetPos[2] *=-10.0;
+	AddVectors(vTargetPos, vOffsetPos, vNewPos);
+		
+	TeleportEntity(client, vNewPos, vTargetLook, NULL_VECTOR);
+	EmitSoundToAll("af_ff/tp.wav",
+		client,
+		SNDCHAN_AUTO,
+		SNDLEVEL_MINIBIKE
+		);
 }
 
 
