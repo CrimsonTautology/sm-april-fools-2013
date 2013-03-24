@@ -46,6 +46,7 @@ public Plugin:myinfo =
 #define SOUND_SCOUT_YELL "vo/scout_sf12_falling01.wav"
 #define SOUND_SOLDIER_YELL "vo/soldier_sf12_falling01.wav"
 #define SOUND_SPY_YELL "vo/spy_sf12_falling01.wav"
+#define SOUND_THUNDER "ambient/explosions/explode_9.wav"
 
 new Float:gPowerLevels[MAXPLAYERS + 1];
 new bool:gIsCharging[MAXPLAYERS + 1];
@@ -54,7 +55,12 @@ new SPRITE_FIRE;
 new SPRITE_EXPLOSION;
 new SPRITE_HALO;
 new SPRITE_GLOW;
-new gColor[4]={188,220,255,255};
+new SPRITE_SMOKE;
+new SPRITE_LIGHTNING;
+new gColor[4]     = {188, 220, 255, 255};
+new Float:UP[3]   = {0.0, 0.0, 1.0};
+new Float:DOWN[3] = {0.0, 1.0, 0.0};
+new Float:gClock = 0.0;
 
 public OnPluginStart()
 {
@@ -66,9 +72,6 @@ public OnPluginStart()
 	RegConsoleCmd("sm_tst1", tst1);
 	RegConsoleCmd("sm_tst3", tst3);
 
-	RegConsoleCmd("sm_tst2", Command_Tst2);
-	RegConsoleCmd("sm_tst4", tst4);
-	RegConsoleCmd("sm_tst5", tst5);
 
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 	HookEvent("player_hurt", Event_PlayerHurt, EventHookMode_Pre);
@@ -95,6 +98,9 @@ public OnMapStart(){
 	PrecacheSound(SOUND_SOLDIER_YELL, true);
 	PrecacheSound(SOUND_SPY_YELL, true);
 
+	PrecacheSound(SOUND_THUNDER, true);
+
+
 	decl String:teleportPath[128];
 	decl String:auruaPath[128];
 	decl String:meleePath[128];
@@ -112,10 +118,12 @@ public OnMapStart(){
 	AddFileToDownloadsTable(swoopPath);
 	AddFileToDownloadsTable(deathPath);
 
-	SPRITE_FIRE=PrecacheModel("materials/sprites/fire2.vmt");
-	SPRITE_HALO = PrecacheModel("materials/sprites/halo01.vmt");
+	SPRITE_FIRE      = PrecacheModel("materials/sprites/fire2.vmt");
+	SPRITE_HALO      = PrecacheModel("materials/sprites/halo01.vmt");
 	SPRITE_EXPLOSION = PrecacheModel("sprites/sprite_fire01.vmt");
-	SPRITE_GLOW = PrecacheModel("materials/sprites/blueglow2.vmt");
+	SPRITE_GLOW      = PrecacheModel("materials/sprites/blueglow2.vmt");
+	SPRITE_SMOKE     = PrecacheModel("sprites/steam1.vmt");
+	SPRITE_LIGHTNING = PrecacheModel("sprites/lgtning.vmt");
 }
 
 public OnClientDisconnect(client){
@@ -147,6 +155,7 @@ public startPowerup(client){
 	if(getYell(client, sound)){
 		EmitSoundToAll(sound, client, SNDCHAN_VOICE, SNDLEVEL_AIRCRAFT, SND_NOFLAGS, SNDVOL_NORMAL);
 	}
+
 
 	EmitSoundToAll(SOUND_AURUA, client, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
 
@@ -236,6 +245,7 @@ public endPowerup(client){
   Do calculations for every player if they are charging up
  */
 public Action:PowerStep(Handle:timer){
+	gClock += 0.1;
 
 	for (new client=1; client <= MaxClients; client++){
 		if(gIsCharging[client]){
@@ -248,21 +258,28 @@ public Action:PowerStep(Handle:timer){
 					POWER_UP_STUNFLAG);
 
 			Entity_AddHealth(client, 10);
-			//new String:name[64];
-			//GetClientName(client, name, sizeof(name));
-			//PrintToChatAll("%s at %f", name, gPowerLevels[client]);
 
 			applyChargingEffects(client);
 
-			//decl Float:vPos[3];
-			//GetClientAbsOrigin(client, vPos);
-			//vPos[2] += 10;
+		}
+		if(gPowerLevels[client] > 200.0){
+			//Low power level
+			//Roll die for a lightning strike
+			if(GetRandomInt(0, 128) == 0){
+				lightningStrike(client);
+			}
 
-			//TE_SetupGlowSprite(vPos, SPRITE_GLOW, TIME_STEP * 3, 1.5, 50);
-			//TE_SendToAll();
+		}if(gPowerLevels[client] > 50.0){
+			//High power level
+			//Roll die for a lightning strike
+			if(GetRandomInt(0, 16) == 0){
+				lightningStrike(client);
+			}
+
+			glowEffect(client);
 
 		}
-		//Ignore players who are not currently charging
+
 	}
 
 	CreateTimer(TIME_STEP, PowerStep);
@@ -276,10 +293,11 @@ public applyChargingEffects(from){
 
 	new Float:powerLevel = gPowerLevels[from];
 
-	//TE_SetupExplosion(vPos, SPRITE_EXPLOSION, 10.0, 1, 0, 0, 5000); // 600
-	//TE_SendToAll();
-
 	TE_SetupBeamRingPoint(vPos, 10.0, 15.0 + (0.25 * powerLevel), SPRITE_FIRE, SPRITE_HALO, 0, FRAME_RATE, TIME_STEP * 3, 128.0, 0.2, gColor, 25, 0);
+	TE_SendToAll();
+	TE_SetupSmoke(vPos, SPRITE_HALO, 10.0 + (0.25 * powerLevel), FRAME_RATE);
+	TE_SendToAll();
+	TE_SetupSparks(vPos, UP, 10, 15);
 	TE_SendToAll();
 
 	for (new client=1; client <= MaxClients; client++){
@@ -289,7 +307,7 @@ public applyChargingEffects(from){
 		}
 
 		//new Float:coefficient = powerLevel / Pow((Entity_GetDistance(from, client) + 1), 2.0);
-		new Float:coefficient = powerLevel / Pow((Entity_GetDistance(from, client) + 1), 2.0);
+		new Float:coefficient = powerLevel * 30  / Pow((Entity_GetDistance(from, client) + 1), 2.2);
 		if(coefficient > 0.0001){
 			pushPlayer(client, vPos, coefficient * 6000, false);
 			Client_Shake(client,
@@ -407,6 +425,49 @@ public teleport(client, target){
 	EmitAmbientSound(SOUND_TELEPORT, vNewPos, client, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL);
 }
 
+public glowEffect(client){
+	decl Float:vPos[3];
+	new Float:powerLevel = gPowerLevels[client];
+	new brightness;
+	GetClientAbsOrigin(client, vPos);
+	vPos[2] +=200;
+	brightness = RoundFloat((0.25 * powerLevel) + Sine(gClock) * 25.0); //Builds an oscilating effect
+	TE_SetupGlowSprite(vPos, SPRITE_EXPLOSION, TIME_STEP * 3, 0.5, brightness);
+	TE_SendToAll();
+
+}
+public lightningStrike(client){
+	decl Float:vPos[3];
+	GetClientAbsOrigin(client, vPos);
+	//Randomize position
+	vPos[0] = vPos[0] + GetRandomInt(-128, 128);
+	vPos[1] = vPos[1] + GetRandomInt(-128, 128);
+	vPos[2] -= 26; // increase y-axis by 26 to strike at player's chest instead of the ground
+
+	// define where the lightning strike starts
+	decl Float:vStart[3];
+	vStart[0] = vPos[0];
+	vStart[1] = vPos[1];
+	vStart[2] = vPos[2] + 800;
+
+
+
+	TE_SetupBeamPoints(vStart, vPos, SPRITE_LIGHTNING, 0, 0, 0, 0.2, 20.0, 10.0, 0, 1.0, gColor, 3);
+	TE_SendToAll();
+
+	TE_SetupSparks(vPos, UP, 5000, 1000);
+	TE_SendToAll();
+
+	TE_SetupEnergySplash(vPos, UP, false);
+	TE_SendToAll();
+
+	TE_SetupSmoke(vPos, SPRITE_SMOKE, 5.0, 10);
+	TE_SendToAll();
+
+
+	EmitAmbientSound(SOUND_THUNDER, vStart, client, SNDLEVEL_RAIDSIREN);
+}
+
 
 public Action:tst1(client, args){
 	PrintToChatAll("Hit tst1");
@@ -424,10 +485,6 @@ public Action:tst1(client, args){
 	return Plugin_Handled;
 }
 
-public Action:Command_Tst2(client, args){
-	PrintToChatAll("Hit tst2");
-	return Plugin_Handled;
-}
 public Action:tst3(client, args){
 	PrintToChatAll("Hit tst3");
 	if (!client) {
@@ -441,11 +498,5 @@ public Action:tst3(client, args){
 	new target = Client_FindByName(searchKey);
 	endPowerup(target);
 
-	return Plugin_Handled;
-}
-public Action:tst4(client, args){
-	return Plugin_Handled;
-}
-public Action:tst5(client, args){
 	return Plugin_Handled;
 }
