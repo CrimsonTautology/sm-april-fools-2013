@@ -200,8 +200,8 @@ public Action:Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroad
 				decl Float:vPos[3];
 				GetClientAbsOrigin(attacker, vPos);
 				pushPlayer(victim, vPos, gPowerLevels[attacker] * 60, true);
-				EmitSoundToAll(SOUND_MELEE, victim, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
-				//EmitSoundToAll(SOUND_SWOOP, victim, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
+				EmitSoundToAll(SOUND_MELEE, attacker, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
+				EmitSoundToAll(SOUND_SWOOP, victim, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
 
 			}
 	}
@@ -465,7 +465,7 @@ public lightningStrike(client){
 	TE_SendToAll();
 
 
-	EmitAmbientSound(SOUND_THUNDER, vStart, client, SNDLEVEL_RAIDSIREN);
+	EmitSoundToAll(SOUND_THUNDER, client, SNDCHAN_AUTO, SNDLEVEL_GUNFIRE, SND_NOFLAGS, SNDVOL_NORMAL);
 }
 
 
