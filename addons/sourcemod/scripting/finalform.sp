@@ -216,6 +216,9 @@ public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroa
 		endPowerup(client);
 	}
 
+    //Revert power
+    gPowerLevels[client] = 0.0;
+
 	return Plugin_Continue;
 }
 public Action:PowerupMinus(client, args){
@@ -256,8 +259,6 @@ public Action:PowerStep(Handle:timer){
 					TIME_STEP + 0.2,
 					1.0,
 					POWER_UP_STUNFLAG);
-
-			Entity_AddHealth(client, 10);
 
 			applyChargingEffects(client);
 
